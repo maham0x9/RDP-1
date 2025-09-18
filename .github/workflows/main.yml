@@ -5,7 +5,7 @@ on:
 
 jobs:
   secure-rdp:
-    runs-on: windows-2019   # 🔹 This forces Windows Server 2019 (Windows 10–based)
+    runs-on: windows-2022
     timeout-minutes: 3600
 
     steps:
