@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Configure Core RDP Settings
         run: |
-          # Enable Remote Desktop and disable Network Level Authentication (if needed)
+          # Enable Remote Desktop and disable Network Level Authentication
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
                              -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
@@ -28,7 +28,7 @@ jobs:
 
           Restart-Service -Name TermService -Force
 
-      - name: Create RDP User with Fixed Password
+      - name: Create RDP User with Admin Rights
         run: |
           $password = "mahamSK=-12"
           $securePass = ConvertTo-SecureString $password -AsPlainText -Force
@@ -40,10 +40,26 @@ jobs:
               New-LocalUser -Name "RDP" -Password $securePass -AccountNeverExpires
           }
 
+          # Add user to Administrators group for full admin rights
           Add-LocalGroupMember -Group "Administrators" -Member "RDP"
+          # Add to Remote Desktop Users for RDP access
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "RDP"
           
           echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
+
+      - name: Install Python 3.12.8
+        run: |
+          $pythonUrl = "https://www.python.org/ftp/python/3.12.8/python-3.12.8-amd64.exe"
+          $installerPath = Join-Path $env:TEMP "python-3.12.8.exe"
+
+          Invoke-WebRequest -Uri $pythonUrl -OutFile $installerPath
+
+          # Install silently with default settings and add to PATH
+          Start-Process -FilePath $installerPath -ArgumentList "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0" -Wait
+
+          # Verify installation
+          python --version
+          pip --version
 
       - name: Install Tailscale
         run: |
@@ -57,9 +73,6 @@ jobs:
 
           # Build one clean string of arguments
           $arguments = "/i `"$installerPath`" /quiet /norestart"
-
-          Write-Host "InstallerPath type: $($installerPath.GetType().FullName)"
-          Write-Host "Arguments: $arguments"
 
           Start-Process -FilePath msiexec.exe -ArgumentList $arguments -Wait -NoNewWindow
 
